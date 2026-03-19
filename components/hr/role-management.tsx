@@ -26,8 +26,10 @@ const ROLE_DESCRIPTIONS: Record<Role, string> = {
 
 export function RoleManagement() {
   const { currentUser } = useAuth()
+  const user = currentUser!
   const [users, setUsers] = useState<User[]>(MOCK_USERS)
   const [editingId, setEditingId] = useState<string | null>(null)
+  if (!currentUser) return null
 
   function handleRoleChange(userId: string, newRole: Role) {
     const user = users.find((u) => u.id === userId)
@@ -35,9 +37,9 @@ export function RoleManagement() {
     const updated = users.map((u) => u.id === userId ? { ...u, role: newRole } : u)
     setUsers(updated)
     addAuditLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
       actionType: "ROLE_CHANGED",
       ticketId: null,
       ticketTitle: null,

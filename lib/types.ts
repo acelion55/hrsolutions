@@ -1,3 +1,5 @@
+export type TicketType = "BUG" | "SERVICE_REQUEST"
+
 export type Role = "EMPLOYEE" | "HR_COORDINATOR" | "HR_SPECIALIST" | "HR_MANAGER" | "SYSTEM_ADMIN"
 
 export type TicketStatus = "OPEN" | "IN_PROGRESS" | "PENDING" | "RESOLVED" | "CLOSED"
@@ -67,6 +69,10 @@ export interface Ticket {
   priority: TicketPriority
   status: TicketStatus
   department: Department
+  location: string
+  projectName: string
+  ticketType: TicketType
+  attachments: { name: string; type: string; url: string }[]
   creatorId: string
   creatorName: string
   assigneeId: string | null

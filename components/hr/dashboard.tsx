@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react"
 import {
   Ticket, BarChart2, Shield, Users, Plus,
   ChevronDown, Lock, Bell, Menu, X,
-  AlertTriangle, Clock, UserX, CheckCircle2
+  AlertTriangle, Clock, UserX, CheckCircle2, LogOut, UserCircle, ArrowLeft
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
@@ -13,13 +13,13 @@ import { getTickets, getAuditLogs } from "@/lib/data"
 import { hasPermission, ROLE_PERMISSIONS } from "@/lib/permissions"
 import { TicketList } from "./ticket-list"
 import { TicketDetail } from "./ticket-detail"
-import { CreateTicketForm } from "./create-ticket"
 import { Analytics } from "./analytics"
 import { AuditLogViewer } from "./audit-log"
 import { RoleManagement } from "./role-management"
+import { ProfilePage } from "./profile"
 import type { Ticket as TicketType, Role } from "@/lib/types"
 
-type View = "tickets" | "analytics" | "audit" | "roles"
+type View = "tickets" | "analytics" | "audit" | "roles" | "profile"
 
 const ROLE_COLORS: Record<Role, string> = {
   EMPLOYEE:       "bg-gray-500/20 text-gray-300 border-gray-500/30",
@@ -37,11 +37,11 @@ const ROLE_BADGE_SOLID: Record<Role, string> = {
   SYSTEM_ADMIN:   "bg-orange-600",
 }
 
-export function HRDashboard() {
-  const { currentUser, setCurrentUser, allUsers } = useAuth()
+export function HRDashboard({ onBack, onCreateTicket }: { onBack?: () => void; onCreateTicket?: () => void } = {}) {
+  const { currentUser, logout, login, allUsers } = useAuth()
+  if (!currentUser) return null
   const [view, setView] = useState<View>("tickets")
   const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null)
-  const [showCreate, setShowCreate] = useState(false)
   const [showUserSwitcher, setShowUserSwitcher] = useState(false)
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [tick, setTick] = useState(0)
@@ -61,10 +61,11 @@ export function HRDashboard() {
   const canManageRoles = hasPermission(currentUser.role, "MANAGE_ROLES")
 
   const navItems = [
-    { id: "tickets" as View,   label: "Tickets",         icon: <Ticket className="h-4 w-4" />,   show: true },
-    { id: "analytics" as View, label: "Analytics",       icon: <BarChart2 className="h-4 w-4" />, show: canViewAnalytics },
-    { id: "audit" as View,     label: "Audit Log",       icon: <Shield className="h-4 w-4" />,   show: canViewAuditLogs },
-    { id: "roles" as View,     label: "Role Management", icon: <Users className="h-4 w-4" />,    show: canManageRoles },
+    { id: "tickets" as View,   label: "Tickets",         icon: <Ticket className="h-4 w-4" />,      show: true },
+    { id: "analytics" as View, label: "Analytics",       icon: <BarChart2 className="h-4 w-4" />,   show: canViewAnalytics },
+    { id: "audit" as View,     label: "Audit Log",       icon: <Shield className="h-4 w-4" />,      show: canViewAuditLogs },
+    { id: "roles" as View,     label: "Role Management", icon: <Users className="h-4 w-4" />,       show: canManageRoles },
+    { id: "profile" as View,   label: "My Profile",      icon: <UserCircle className="h-4 w-4" />, show: true },
   ].filter((n) => n.show)
 
   const openTickets = tickets.filter((t) => !t.deletedAt && t.status === "OPEN").length
@@ -73,17 +74,24 @@ export function HRDashboard() {
   const [showNotifications, setShowNotifications] = useState(false)
   const [readIds, setReadIds] = useState<Set<string>>(new Set())
   const notifRef = useRef<HTMLDivElement>(null)
+  const bellRef = useRef<HTMLButtonElement>(null)
 
-  // Close on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+      if (
+        notifRef.current && !notifRef.current.contains(e.target as Node) &&
+        bellRef.current && !bellRef.current.contains(e.target as Node)
+      ) {
         setShowNotifications(false)
       }
     }
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
   }, [])
+
+  function toggleNotifications() {
+    setShowNotifications((v) => !v)
+  }
 
   // Build role-aware notifications
   const notifications = (() => {
@@ -152,8 +160,8 @@ export function HRDashboard() {
     refresh()
   }
 
-  function switchUser(user: typeof currentUser) {
-    setCurrentUser(user)
+  function switchUser(user: NonNullable<typeof currentUser>) {
+    login(user.email, "password")
     setSelectedTicket(null)
     setView("tickets")
     setShowUserSwitcher(false)
@@ -267,7 +275,7 @@ export function HRDashboard() {
         {canCreateTicket && (
           <div className="p-3 border-t border-gray-800">
             <button
-              onClick={() => setShowCreate(true)}
+              onClick={() => onCreateTicket?.()}
               className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
             >
               <Plus className="h-4 w-4" />
@@ -288,24 +296,36 @@ export function HRDashboard() {
               </span>
             ))}
           </div>
+          <button
+            onClick={logout}
+            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-gray-700 text-gray-400 hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/5 text-sm transition-colors"
+          >
+            <LogOut className="h-4 w-4" /> Sign Out
+          </button>
         </div>
       </aside>
 
       {/* ── Main content ─────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="flex items-center gap-3 px-4 py-3 border-b border-gray-800 bg-gray-900/80 backdrop-blur shrink-0">
+        <header className="flex items-center gap-3 px-4 py-3 border-b border-gray-800 bg-gray-900/80 backdrop-blur shrink-0 overflow-visible">
           <button className="md:hidden text-gray-400 hover:text-white" onClick={() => setShowMobileSidebar(true)}>
             <Menu className="h-5 w-5" />
           </button>
+          {onBack && (
+            <button onClick={onBack} className="hidden md:flex items-center gap-1 text-xs text-gray-500 hover:text-white transition-colors">
+              <ArrowLeft className="h-3.5 w-3.5" /> Home
+            </button>
+          )}
           <h1 className="text-sm font-semibold text-white">
-            {view === "tickets" ? "Support Tickets" : view === "analytics" ? "Analytics" : view === "audit" ? "Audit Log" : "Role Management"}
+            {view === "tickets" ? "Support Tickets" : view === "analytics" ? "Analytics" : view === "audit" ? "Audit Log" : view === "profile" ? "My Profile" : "Role Management"}
           </h1>
           <div className="ml-auto flex items-center gap-3">
             {/* Bell with dropdown */}
             <div className="relative" ref={notifRef}>
               <button
-                onClick={() => setShowNotifications((v) => !v)}
+                ref={bellRef}
+                onClick={toggleNotifications}
                 className="relative p-1.5 rounded-xl hover:bg-gray-800 transition-colors"
               >
                 <Bell className={cn("h-5 w-5", unreadCount > 0 ? "text-white" : "text-gray-500")} />
@@ -316,78 +336,66 @@ export function HRDashboard() {
                 )}
               </button>
 
-              <AnimatePresence>
-                {showNotifications && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 6, scale: 0.97 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-10 z-50 w-80 bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden"
-                  >
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-                      <div className="flex items-center gap-2">
-                        <Bell className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm font-semibold text-white">Notifications</span>
-                        {unreadCount > 0 && (
-                          <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full">{unreadCount}</span>
-                        )}
-                      </div>
+              {showNotifications && (
+                <div className="absolute right-0 top-11 w-80 bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden" style={{ zIndex: 99999 }}>
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+                    <div className="flex items-center gap-2">
+                      <Bell className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm font-semibold text-white">Notifications</span>
                       {unreadCount > 0 && (
-                        <button
-                          onClick={markAllRead}
-                          className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                        >
-                          Mark all read
-                        </button>
+                        <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full">{unreadCount}</span>
                       )}
                     </div>
-
-                    {/* Items */}
-                    <div className="max-h-80 overflow-y-auto divide-y divide-gray-800">
-                      {notifications.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-10 text-gray-600">
-                          <Bell className="h-7 w-7 mb-2 opacity-30" />
-                          <p className="text-sm">No notifications</p>
-                        </div>
-                      ) : (
-                        notifications.map((n) => {
-                          const isUnread = !readIds.has(n.id)
-                          return (
-                            <button
-                              key={n.id}
-                              onClick={() => handleNotifClick(n)}
-                              className={cn(
-                                "w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-gray-800/60 transition-colors",
-                                isUnread && "bg-gray-800/30"
-                              )}
-                            >
-                              <div className={cn("mt-0.5 shrink-0", n.color)}>{n.icon}</div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-xs font-semibold text-gray-300">{n.title}</p>
-                                  {isUnread && <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />}
-                                </div>
-                                <p className="text-xs text-gray-500 truncate mt-0.5">{n.body}</p>
-                              </div>
-                            </button>
-                          )
-                        })
-                      )}
-                    </div>
-
-                    {/* Footer */}
-                    {notifications.length > 0 && (
-                      <div className="px-4 py-2.5 border-t border-gray-800">
-                        <p className="text-xs text-gray-600 text-center">
-                          {notifications.length} notification{notifications.length !== 1 ? "s" : ""} · role-filtered
-                        </p>
-                      </div>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                        Mark all read
+                      </button>
                     )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
+
+                  {/* Items */}
+                  <div className="max-h-80 overflow-y-auto divide-y divide-gray-800">
+                    {notifications.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-10 text-gray-600">
+                        <Bell className="h-7 w-7 mb-2 opacity-30" />
+                        <p className="text-sm">No notifications</p>
+                      </div>
+                    ) : (
+                      notifications.map((n) => {
+                        const isUnread = !readIds.has(n.id)
+                        return (
+                          <button
+                            key={n.id}
+                            onClick={() => handleNotifClick(n)}
+                            className={cn(
+                              "w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-gray-800/60 transition-colors",
+                              isUnread && "bg-gray-800/30"
+                            )}
+                          >
+                            <div className={cn("mt-0.5 shrink-0", n.color)}>{n.icon}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs font-semibold text-gray-300">{n.title}</p>
+                                {isUnread && <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />}
+                              </div>
+                              <p className="text-xs text-gray-500 truncate mt-0.5">{n.body}</p>
+                            </div>
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
+
+                  {notifications.length > 0 && (
+                    <div className="px-4 py-2.5 border-t border-gray-800">
+                      <p className="text-xs text-gray-600 text-center">
+                        {notifications.length} notification{notifications.length !== 1 ? "s" : ""} · role-filtered
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <span className={cn("text-xs px-2 py-1 rounded-lg border hidden sm:inline-block", ROLE_COLORS[currentUser.role])}>
               {currentUser.role.replace(/_/g, " ")}
@@ -452,7 +460,7 @@ export function HRDashboard() {
                         <p className="text-sm">Select a ticket to view details</p>
                         {canCreateTicket && (
                           <button
-                            onClick={() => setShowCreate(true)}
+                            onClick={() => onCreateTicket?.()}
                             className="mt-4 flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300"
                           >
                             <Plus className="h-4 w-4" /> Create a new ticket
@@ -481,18 +489,19 @@ export function HRDashboard() {
                   <RoleManagement />
                 </div>
               )}
+
+              {view === "profile" && (
+                <ProfilePage
+                  key={tick}
+                  tickets={tickets}
+                  onSelectTicket={(t) => { setSelectedTicket(t); setView("tickets") }}
+                />
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
 
-      {/* Create ticket modal */}
-      {showCreate && (
-        <CreateTicketForm
-          onClose={() => setShowCreate(false)}
-          onCreated={(t) => { refresh(); setSelectedTicket(t) }}
-        />
-      )}
     </div>
   )
 }

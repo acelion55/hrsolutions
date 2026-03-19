@@ -93,8 +93,14 @@ export function canViewTicket(user: User, ticket: Ticket): boolean {
 }
 
 export function canUpdateStatus(user: User, ticket: Ticket): boolean {
+  // Assignee can always resolve/close their assigned ticket
+  if (ticket.assigneeId === user.id) return true
   if (!hasPermission(user.role, "UPDATE_STATUS")) return false
   return canViewTicket(user, ticket)
+}
+
+export function isAssignee(user: User, ticket: Ticket): boolean {
+  return ticket.assigneeId === user.id
 }
 
 export function canPostInternalNote(user: User): boolean {

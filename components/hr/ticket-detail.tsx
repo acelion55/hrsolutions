@@ -12,13 +12,14 @@ import type { Ticket, TicketStatus, User } from "@/lib/types"
 import { useAuth } from "./auth-context"
 import {
   canUpdateStatus, canPostInternalNote, canDeleteTicket,
-  canAssignTicket, canViewTicket, SENSITIVE_CATEGORIES
+  canAssignTicket, canViewTicket, isAssignee, hasPermission, SENSITIVE_CATEGORIES
 } from "@/lib/permissions"
 import {
   updateTicketStatus, assignTicket, addComment,
   softDeleteTicket, addAuditLog, MOCK_USERS,
   type TicketComment
 } from "@/lib/data"
+import { toast } from "sonner"
 
 const STATUS_CONFIG: Record<TicketStatus, { label: string; color: string; icon: React.ReactNode }> = {
   OPEN: { label: "Open", color: "bg-blue-500/20 text-blue-300 border-blue-500/30", icon: <Circle className="h-3 w-3" /> },
@@ -43,22 +44,29 @@ interface Props {
 
 export function TicketDetail({ ticket, onUpdate, onDelete }: Props) {
   const { currentUser } = useAuth()
+  const user = currentUser!
   const [comment, setComment] = useState("")
   const [isInternal, setIsInternal] = useState(false)
   const [activeTab, setActiveTab] = useState<"comments" | "details">("comments")
+  if (!currentUser) return null
 
   const isSensitive = SENSITIVE_CATEGORIES.includes(ticket.category)
-  const canSeeInternalNotes = canPostInternalNote(currentUser)
-  const hrUsers: User[] = MOCK_USERS.filter((u) =>
-    ["HR_COORDINATOR", "HR_SPECIALIST", "HR_MANAGER"].includes(u.role)
-  )
+  const canSeeInternalNotes = canPostInternalNote(user)
+
+  // All assignable users grouped by department
+  const assignableUsers = MOCK_USERS.filter((u) => u.role !== "SYSTEM_ADMIN")
+  const departments = Array.from(new Set(assignableUsers.map((u) => u.department)))
+  const groupedUsers = departments.map((dept) => ({
+    dept,
+    users: assignableUsers.filter((u) => u.department === dept),
+  }))
 
   // Log view for sensitive tickets
   if (isSensitive) {
     addAuditLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
       actionType: "TICKET_VIEWED",
       ticketId: ticket.id,
       ticketTitle: ticket.title,
@@ -73,9 +81,9 @@ export function TicketDetail({ ticket, onUpdate, onDelete }: Props) {
     const old = ticket.status
     updateTicketStatus(ticket.id, status)
     addAuditLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
       actionType: "STATUS_CHANGED",
       ticketId: ticket.id,
       ticketTitle: ticket.title,
@@ -85,21 +93,23 @@ export function TicketDetail({ ticket, onUpdate, onDelete }: Props) {
       ipAddress: "192.168.1.100",
     })
     onUpdate()
+    if (status === "CLOSED") toast.success("Ticket closed successfully!", { description: ticket.title })
+    else if (status === "RESOLVED") toast.success("Ticket resolved successfully!", { description: ticket.title })
   }
 
   function handleAssign(userId: string) {
-    const user = MOCK_USERS.find((u) => u.id === userId)
-    if (!user) return
-    assignTicket(ticket.id, user.id, user.name)
+    const assignee = MOCK_USERS.find((u) => u.id === userId)
+    if (!assignee) return
+    assignTicket(ticket.id, assignee.id, assignee.name)
     addAuditLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
       actionType: "ASSIGNED",
       ticketId: ticket.id,
       ticketTitle: ticket.title,
       oldValue: ticket.assigneeName,
-      newValue: user.name,
+      newValue: assignee.name,
       timestamp: new Date().toISOString(),
       ipAddress: "192.168.1.100",
     })
@@ -111,18 +121,18 @@ export function TicketDetail({ ticket, onUpdate, onDelete }: Props) {
     if (!comment.trim()) return
     const commentData: Omit<TicketComment, "id"> = {
       ticketId: ticket.id,
-      authorId: currentUser.id,
-      authorName: currentUser.name,
-      authorRole: currentUser.role,
+      authorId: user.id,
+      authorName: user.name,
+      authorRole: user.role,
       content: comment.trim(),
       isInternal,
       createdAt: new Date().toISOString(),
     }
     addComment(ticket.id, commentData)
     addAuditLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
       actionType: isInternal ? "INTERNAL_NOTE_ADDED" : "COMMENT_ADDED",
       ticketId: ticket.id,
       ticketTitle: ticket.title,
@@ -138,9 +148,9 @@ export function TicketDetail({ ticket, onUpdate, onDelete }: Props) {
   function handleDelete() {
     softDeleteTicket(ticket.id)
     addAuditLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
       actionType: "TICKET_DELETED",
       ticketId: ticket.id,
       ticketTitle: ticket.title,
@@ -170,7 +180,7 @@ export function TicketDetail({ ticket, onUpdate, onDelete }: Props) {
             )}
             <h2 className="text-base font-semibold text-white leading-tight">{ticket.title}</h2>
           </div>
-          {canDeleteTicket(currentUser) && (
+          {canDeleteTicket(user) && (
             <button
               onClick={handleDelete}
               className="shrink-0 p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
@@ -198,9 +208,12 @@ export function TicketDetail({ ticket, onUpdate, onDelete }: Props) {
         </div>
 
         {/* Status changer */}
-        {canUpdateStatus(currentUser, ticket) && (
+        {canUpdateStatus(user, ticket) && (
           <div className="flex gap-1.5 flex-wrap">
-            {(["OPEN", "IN_PROGRESS", "PENDING", "RESOLVED", "CLOSED"] as TicketStatus[]).map((s) => (
+            {(isAssignee(user, ticket) && !hasPermission(user.role, "UPDATE_STATUS")
+              ? (["RESOLVED", "CLOSED"] as TicketStatus[])
+              : (["OPEN", "IN_PROGRESS", "PENDING", "RESOLVED", "CLOSED"] as TicketStatus[])
+            ).map((s) => (
               <button
                 key={s}
                 onClick={() => handleStatusChange(s)}
@@ -214,6 +227,27 @@ export function TicketDetail({ ticket, onUpdate, onDelete }: Props) {
                 {STATUS_CONFIG[s].label}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Quick Assign */}
+        {canAssignTicket(user) && (
+          <div className="flex items-center gap-2 mt-2">
+            <UserCheck className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+            <select
+              value={ticket.assigneeId ?? ""}
+              onChange={(e) => e.target.value && handleAssign(e.target.value)}
+              className="flex-1 bg-gray-800/60 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500/40"
+            >
+              <option value="">{ticket.assigneeName ?? "Unassigned"}</option>
+              {groupedUsers.map(({ dept, users }) => (
+                <optgroup key={dept} label={dept}>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name} · {u.role.replace(/_/g, " ")}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </div>
         )}
       </div>
@@ -317,32 +351,39 @@ export function TicketDetail({ ticket, onUpdate, onDelete }: Props) {
             </div>
 
             {/* Assign */}
-            {canAssignTicket(currentUser) && (
+            {canAssignTicket(user) && (
               <div className="bg-gray-800/40 rounded-xl p-3 border border-gray-700/50">
                 <div className="flex items-center gap-1.5 mb-2">
                   <UserCheck className="h-4 w-4 text-gray-400" />
                   <p className="text-sm font-medium text-gray-300">Assign To</p>
                 </div>
-                <div className="space-y-1">
-                  {hrUsers.map((u) => (
-                    <button
-                      key={u.id}
-                      onClick={() => handleAssign(u.id)}
-                      className={cn(
-                        "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors",
-                        ticket.assigneeId === u.id
-                          ? "bg-blue-600/20 border border-blue-500/40 text-blue-300"
-                          : "hover:bg-gray-700/50 text-gray-400 border border-transparent"
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded-full bg-gray-600 flex items-center justify-center text-xs font-bold text-white">
-                          {u.avatar}
-                        </div>
-                        <span>{u.name}</span>
+                <div className="space-y-3">
+                  {groupedUsers.map(({ dept, users }) => (
+                    <div key={dept}>
+                      <p className="text-xs text-gray-600 uppercase tracking-wider mb-1 px-1">{dept}</p>
+                      <div className="space-y-1">
+                        {users.map((u) => (
+                          <button
+                            key={u.id}
+                            onClick={() => handleAssign(u.id)}
+                            className={cn(
+                              "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors",
+                              ticket.assigneeId === u.id
+                                ? "bg-blue-600/20 border border-blue-500/40 text-blue-300"
+                                : "hover:bg-gray-700/50 text-gray-400 border border-transparent"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="h-6 w-6 rounded-full bg-gray-600 flex items-center justify-center text-xs font-bold text-white">
+                                {u.avatar}
+                              </div>
+                              <span>{u.name}</span>
+                            </div>
+                            <span className="text-xs text-gray-600">{u.role.replace(/_/g, " ")}</span>
+                          </button>
+                        ))}
                       </div>
-                      <span className="text-xs text-gray-600">{u.role.replace("_", " ")}</span>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>

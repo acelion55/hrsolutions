@@ -5,7 +5,7 @@ import { Search, Filter, Lock, AlertTriangle, Clock, CheckCircle2, Circle, Loade
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import type { Ticket, TicketStatus, TicketCategory } from "@/lib/types"
+import type { Ticket, TicketStatus } from "@/lib/types"
 import { useAuth } from "./auth-context"
 import { filterTicketsForUser, SENSITIVE_CATEGORIES } from "@/lib/permissions"
 
@@ -32,17 +32,17 @@ interface Props {
 
 export function TicketList({ tickets, selectedId, onSelect }: Props) {
   const { currentUser } = useAuth()
+  if (!currentUser) return null
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "ALL">("ALL")
-  const [categoryFilter, setCategoryFilter] = useState<TicketCategory | "ALL">("ALL")
+  const [priorityFilter, setPriorityFilter] = useState<"ALL" | "LOW" | "MEDIUM" | "HIGH" | "CRITICAL">("ALL")
 
   const visible = filterTicketsForUser(currentUser, tickets).filter((t) => {
     if (t.deletedAt) return false
-    const matchSearch = t.title.toLowerCase().includes(search.toLowerCase()) ||
-      t.description.toLowerCase().includes(search.toLowerCase())
+    const matchSearch = t.title.toLowerCase().includes(search.toLowerCase())
     const matchStatus = statusFilter === "ALL" || t.status === statusFilter
-    const matchCategory = categoryFilter === "ALL" || t.category === categoryFilter
-    return matchSearch && matchStatus && matchCategory
+    const matchPriority = priorityFilter === "ALL" || t.priority === priorityFilter
+    return matchSearch && matchStatus && matchPriority
   })
 
   return (
@@ -54,11 +54,12 @@ export function TicketList({ tickets, selectedId, onSelect }: Props) {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tickets..."
+            placeholder="Search by title..."
             className="pl-9 bg-gray-800/60 border-gray-700 text-white placeholder:text-gray-500 rounded-xl text-sm"
           />
         </div>
-        <div className="flex gap-2 flex-wrap">
+        {/* Status filter */}
+        <div className="flex gap-1.5 flex-wrap">
           {(["ALL", "OPEN", "IN_PROGRESS", "PENDING", "RESOLVED", "CLOSED"] as const).map((s) => (
             <button
               key={s}
@@ -70,7 +71,26 @@ export function TicketList({ tickets, selectedId, onSelect }: Props) {
                   : "border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-300"
               )}
             >
-              {s === "ALL" ? "All" : STATUS_CONFIG[s].label}
+              {s === "ALL" ? "All Status" : STATUS_CONFIG[s].label}
+            </button>
+          ))}
+        </div>
+
+        {/* Priority filter */}
+        <div className="flex gap-1.5 flex-wrap">
+          {(["ALL", "LOW", "MEDIUM", "HIGH", "CRITICAL"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPriorityFilter(p)}
+              className={cn(
+                "text-xs px-2.5 py-1 rounded-lg border transition-colors",
+                priorityFilter === p
+                  ? "bg-blue-600 border-blue-500 text-white"
+                  : p === "ALL" ? "border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-300"
+                  : cn("border-gray-700 hover:border-gray-500", PRIORITY_COLOR[p])
+              )}
+            >
+              {p === "ALL" ? "All Priority" : p}
             </button>
           ))}
         </div>

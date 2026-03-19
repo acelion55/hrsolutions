@@ -10,6 +10,7 @@ import type { TicketCategory, TicketPriority, Department, Ticket } from "@/lib/t
 import { useAuth } from "./auth-context"
 import { createTicket, addAuditLog } from "@/lib/data"
 import { SENSITIVE_CATEGORIES } from "@/lib/permissions"
+import { toast } from "sonner"
 
 const CATEGORIES: TicketCategory[] = ["GENERAL", "IT", "PAYROLL", "BENEFITS", "GRIEVANCE", "MEDICAL", "ONBOARDING", "OFFBOARDING"]
 const PRIORITIES: TicketPriority[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
@@ -22,11 +23,14 @@ interface Props {
 
 export function CreateTicketForm({ onClose, onCreated }: Props) {
   const { currentUser } = useAuth()
+  const user = currentUser!
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState<TicketCategory>("GENERAL")
   const [priority, setPriority] = useState<TicketPriority>("MEDIUM")
-  const [department, setDepartment] = useState<Department>(currentUser.department)
+  const [department, setDepartment] = useState<Department>(user.department)
+
+  if (!currentUser) return null
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -39,16 +43,20 @@ export function CreateTicketForm({ onClose, onCreated }: Props) {
       priority,
       status: "OPEN",
       department,
-      creatorId: currentUser.id,
-      creatorName: currentUser.name,
+      location: user.department + " Office",
+      projectName: "General",
+      ticketType: "SERVICE_REQUEST",
+      attachments: [],
+      creatorId: user.id,
+      creatorName: user.name,
       assigneeId: null,
       assigneeName: null,
     })
 
     addAuditLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
       actionType: "TICKET_CREATED",
       ticketId: ticket.id,
       ticketTitle: ticket.title,
@@ -60,6 +68,7 @@ export function CreateTicketForm({ onClose, onCreated }: Props) {
 
     onCreated(ticket)
     onClose()
+    toast.success("Ticket created successfully!", { description: ticket.title })
   }
 
   const isSensitive = SENSITIVE_CATEGORIES.includes(category)
