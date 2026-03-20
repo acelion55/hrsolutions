@@ -29,7 +29,7 @@ const PRIORITY_COLORS: Record<TicketPriority, { active: string; idle: string }> 
   CRITICAL: { active: "border-red-400 bg-red-50 text-red-700",           idle: "border-gray-200 text-gray-400 hover:border-red-300" },
 }
 
-const sel = "w-full rounded-xl bg-white border border-gray-200 text-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 appearance-none"
+const sel = "w-full rounded-xl bg-white border border-gray-200 text-gray-800 px-3 py-2.5 text-sm md:text-base font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 appearance-none"
 
 export function CreateTaskForm({ onBack, onCreated }: Props) {
   const { currentUser } = useAuth()
@@ -100,14 +100,14 @@ export function CreateTaskForm({ onBack, onCreated }: Props) {
 
       {/* Header */}
       <header className="bg-white border-b border-yellow-200 shadow-sm px-6 py-4 flex items-center gap-4 sticky top-0 z-10">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 font-medium transition-colors">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-sm md:text-base text-gray-500 hover:text-gray-800 font-semibold transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
         <div className="flex items-center gap-2">
           <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
             <Ticket className="h-4 w-4 text-white" />
           </div>
-          <h1 className="text-sm font-bold text-gray-900">Create New Task</h1>
+          <h1 className="text-sm md:text-lg font-bold text-gray-900">Create New Task</h1>
         </div>
       </header>
 
@@ -122,13 +122,13 @@ export function CreateTaskForm({ onBack, onCreated }: Props) {
 
               {/* Ticket Type */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
                   <Tag className="h-3.5 w-3.5 text-yellow-500" /> Ticket Type
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   {([["BUG", "Bug Report", <Bug key="b" className="h-4 w-4" />], ["SERVICE_REQUEST", "Service Request", <Wrench key="s" className="h-4 w-4" />]] as [TicketType, string, React.ReactNode][]).map(([val, label, icon]) => (
                     <button key={val} type="button" onClick={() => setTicketType(val)}
-                      className={cn("flex items-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm transition-all",
+                      className={cn("flex items-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold text-sm md:text-base transition-all",
                         ticketType === val ? "border-yellow-400 bg-yellow-50 text-yellow-800" : "border-gray-200 bg-white text-gray-500 hover:border-yellow-300")}>
                       {icon} {label}
                     </button>
@@ -138,28 +138,28 @@ export function CreateTaskForm({ onBack, onCreated }: Props) {
 
               {/* Title + Description */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
                   <AlignLeft className="h-3.5 w-3.5 text-yellow-500" /> Task Details
                 </p>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Title <span className="text-red-400">*</span></label>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-600 mb-1.5">Title <span className="text-red-400">*</span></label>
                   <input value={title} onChange={(e) => setTitle(e.target.value)} required
                     placeholder="Brief description of the issue or request"
-                    className="w-full rounded-xl bg-gray-50 border border-gray-200 text-gray-800 placeholder:text-gray-400 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:bg-white transition-colors" />
+                    className="w-full rounded-xl bg-gray-50 border border-gray-200 text-gray-800 placeholder:text-gray-400 px-3 py-2.5 text-sm md:text-base font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:bg-white transition-colors" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Description <span className="text-red-400">*</span></label>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-600 mb-1.5">Description <span className="text-red-400">*</span></label>
                   <textarea value={description} onChange={(e) => setDescription(e.target.value)} required rows={5}
                     placeholder="Provide detailed information about the issue or request..."
-                    className="w-full rounded-xl bg-gray-50 border border-gray-200 text-gray-800 placeholder:text-gray-400 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:bg-white transition-colors resize-none" />
+                    className="w-full rounded-xl bg-gray-50 border border-gray-200 text-gray-800 placeholder:text-gray-400 px-3 py-2.5 text-sm md:text-base font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:bg-white transition-colors resize-none" />
                 </div>
               </div>
 
               {/* Category + Priority */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Category & Priority</p>
+                <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wide">Category & Priority</p>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Category</label>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-600 mb-1.5">Category</label>
                   <div className="relative">
                     <select value={category} onChange={(e) => setCategory(e.target.value as TicketCategory)} className={sel}>
                       {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
@@ -168,11 +168,11 @@ export function CreateTaskForm({ onBack, onCreated }: Props) {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Priority</label>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-600 mb-1.5">Priority</label>
                   <div className="grid grid-cols-4 gap-2">
                     {PRIORITIES.map((p) => (
                       <button key={p} type="button" onClick={() => setPriority(p)}
-                        className={cn("py-2 rounded-xl border-2 text-xs font-bold transition-all",
+                        className={cn("py-2 rounded-xl border-2 text-xs md:text-sm font-bold transition-all",
                           priority === p ? PRIORITY_COLORS[p].active : PRIORITY_COLORS[p].idle)}>
                         {p}
                       </button>
@@ -182,7 +182,7 @@ export function CreateTaskForm({ onBack, onCreated }: Props) {
                 {isSensitive && (
                   <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3">
                     <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                    <p className="text-xs text-amber-700"><strong>Sensitive Category:</strong> Restricted to HR Managers only.</p>
+                    <p className="text-xs md:text-sm text-amber-700"><strong>Sensitive Category:</strong> Restricted to HR Managers only.</p>
                   </div>
                 )}
               </div>
@@ -194,12 +194,12 @@ export function CreateTaskForm({ onBack, onCreated }: Props) {
 
               {/* Location + Department + Project */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
                   <Building2 className="h-3.5 w-3.5 text-yellow-500" /> Location & Project
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1">
+                    <label className="block text-xs md:text-sm font-semibold text-gray-600 mb-1.5 flex items-center gap-1">
                       <MapPin className="h-3 w-3 text-yellow-500" /> Location
                     </label>
                     <div className="relative">
@@ -210,7 +210,7 @@ export function CreateTaskForm({ onBack, onCreated }: Props) {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1">
+                    <label className="block text-xs md:text-sm font-semibold text-gray-600 mb-1.5 flex items-center gap-1">
                       <Building2 className="h-3 w-3 text-yellow-500" /> Department
                     </label>
                     <div className="relative">
@@ -222,7 +222,7 @@ export function CreateTaskForm({ onBack, onCreated }: Props) {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1">
+                  <label className="block text-xs md:text-sm font-semibold text-gray-600 mb-1.5 flex items-center gap-1">
                     <FolderOpen className="h-3 w-3 text-yellow-500" /> Project Name
                   </label>
                   <div className="relative">
@@ -236,7 +236,7 @@ export function CreateTaskForm({ onBack, onCreated }: Props) {
 
               {/* Assign Employee */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
                   <UserCheck className="h-3.5 w-3.5 text-yellow-500" /> Assign To <span className="text-gray-400 font-normal normal-case">(optional)</span>
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
@@ -252,8 +252,8 @@ export function CreateTaskForm({ onBack, onCreated }: Props) {
                         assigneeId === u.id ? "border-yellow-400 bg-yellow-50 text-yellow-800 font-semibold" : "border-gray-200 text-gray-500 hover:border-yellow-300")}>
                       <div className="h-7 w-7 rounded-full bg-yellow-400 flex items-center justify-center text-xs font-bold text-white shrink-0">{u.avatar}</div>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-gray-800 truncate">{u.name}</p>
-                        <p className="text-xs text-gray-400 truncate">{u.role.replace(/_/g, " ")}</p>
+                        <p className="text-xs md:text-sm font-semibold text-gray-800 truncate">{u.name}</p>
+                        <p className="text-xs md:text-sm text-gray-400 truncate">{u.role.replace(/_/g, " ")}</p>
                       </div>
                     </button>
                   ))}
@@ -262,23 +262,23 @@ export function CreateTaskForm({ onBack, onCreated }: Props) {
 
               {/* Attachments */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
                   <Paperclip className="h-3.5 w-3.5 text-yellow-500" /> Attachments
                 </p>
                 <input ref={fileRef} type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onChange={handleFiles} className="hidden" />
                 <button type="button" onClick={() => fileRef.current?.click()}
                   className="w-full flex flex-col items-center justify-center gap-1.5 px-4 py-5 rounded-xl border-2 border-dashed border-yellow-300 text-yellow-600 hover:bg-yellow-50 hover:border-yellow-400 transition-colors">
                   <Paperclip className="h-5 w-5" />
-                  <span className="text-sm font-semibold">Click to attach files</span>
-                  <span className="text-xs text-gray-400">Images, PDF, Word, Excel</span>
+                  <span className="text-sm md:text-base font-semibold">Click to attach files</span>
+                  <span className="text-xs md:text-sm text-gray-400">Images, PDF, Word, Excel</span>
                 </button>
                 {attachments.length > 0 && (
                   <div className="mt-3 space-y-2">
                     {attachments.map((f, i) => (
                       <div key={i} className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-xl">
                         {f.type.startsWith("image/") ? <ImageIcon className="h-4 w-4 text-yellow-500 shrink-0" /> : <FileText className="h-4 w-4 text-yellow-500 shrink-0" />}
-                        <span className="text-xs text-gray-700 flex-1 truncate font-medium">{f.name}</span>
-                        <span className="text-xs text-gray-400">{formatSize(f.size)}</span>
+                        <span className="text-xs md:text-sm text-gray-700 flex-1 truncate font-medium">{f.name}</span>
+                        <span className="text-xs md:text-sm text-gray-400">{formatSize(f.size)}</span>
                         <button type="button" onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -294,11 +294,11 @@ export function CreateTaskForm({ onBack, onCreated }: Props) {
           {/* Submit row — full width */}
           <div className="flex gap-3 mt-5 pb-6">
             <button type="button" onClick={onBack}
-              className="flex-1 lg:flex-none lg:w-40 py-3 rounded-xl border-2 border-gray-200 text-gray-600 hover:bg-gray-100 text-sm font-semibold transition-colors">
+              className="flex-1 lg:flex-none lg:w-40 py-3 rounded-xl border-2 border-gray-200 text-gray-600 hover:bg-gray-100 text-sm md:text-base font-semibold transition-colors">
               Cancel
             </button>
             <button type="submit"
-              className="flex-1 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-white text-sm font-bold transition-colors shadow-sm flex items-center justify-center gap-2">
+              className="flex-1 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-white text-sm md:text-base font-bold transition-colors shadow-sm flex items-center justify-center gap-2">
               <Ticket className="h-4 w-4" /> Submit Ticket
             </button>
           </div>
