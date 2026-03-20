@@ -1,10 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { X, AlertTriangle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { useState, useRef } from "react"
+import { X, AlertTriangle, Paperclip, FileText, ImageIcon, Trash2, Tag, AlignLeft, Building2, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { TicketCategory, TicketPriority, Department, Ticket } from "@/lib/types"
 import { useAuth } from "./auth-context"
@@ -13,156 +10,205 @@ import { SENSITIVE_CATEGORIES } from "@/lib/permissions"
 import { toast } from "sonner"
 
 const CATEGORIES: TicketCategory[] = ["GENERAL", "IT", "PAYROLL", "BENEFITS", "GRIEVANCE", "MEDICAL", "ONBOARDING", "OFFBOARDING"]
-const PRIORITIES: TicketPriority[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
 const DEPARTMENTS: Department[] = ["ENGINEERING", "FINANCE", "OPERATIONS", "MARKETING", "HR"]
 
-interface Props {
-  onClose: () => void
-  onCreated: (ticket: Ticket) => void
-}
+const PRIORITY_CONFIG: { value: TicketPriority; label: string; color: string; active: string }[] = [
+  { value: "LOW",      label: "Low",      color: "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50",         active: "border-gray-400 bg-gray-100 text-gray-700 font-bold" },
+  { value: "MEDIUM",   label: "Medium",   color: "border-blue-200 text-blue-500 hover:border-blue-300 hover:bg-blue-50",         active: "border-blue-400 bg-blue-50 text-blue-700 font-bold" },
+  { value: "HIGH",     label: "High",     color: "border-orange-200 text-orange-500 hover:border-orange-300 hover:bg-orange-50", active: "border-orange-400 bg-orange-50 text-orange-700 font-bold" },
+  { value: "CRITICAL", label: "Critical", color: "border-red-200 text-red-500 hover:border-red-300 hover:bg-red-50",             active: "border-red-400 bg-red-50 text-red-700 font-bold" },
+]
+
+interface AttachmentFile { name: string; size: number; type: string; url: string }
+interface Props { onClose: () => void; onCreated: (ticket: Ticket) => void }
 
 export function CreateTicketForm({ onClose, onCreated }: Props) {
   const { currentUser } = useAuth()
-  const user = currentUser!
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState<TicketCategory>("GENERAL")
   const [priority, setPriority] = useState<TicketPriority>("MEDIUM")
-  const [department, setDepartment] = useState<Department>(user.department)
+  const [department, setDepartment] = useState<Department>(currentUser?.department ?? "ENGINEERING")
+  const [attachments, setAttachments] = useState<AttachmentFile[]>([])
+  const fileRef = useRef<HTMLInputElement>(null)
 
   if (!currentUser) return null
+  const user = currentUser
+
+  function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    setAttachments((prev) => [...prev, ...files.map((f) => ({ name: f.name, size: f.size, type: f.type, url: URL.createObjectURL(f) }))])
+    e.target.value = ""
+  }
+
+  function formatSize(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim() || !description.trim()) return
-
     const ticket = createTicket({
-      title: title.trim(),
-      description: description.trim(),
-      category,
-      priority,
-      status: "OPEN",
-      department,
-      location: user.department + " Office",
-      projectName: "General",
-      ticketType: "SERVICE_REQUEST",
-      attachments: [],
-      creatorId: user.id,
-      creatorName: user.name,
-      assigneeId: null,
-      assigneeName: null,
+      title: title.trim(), description: description.trim(),
+      category, priority, status: "OPEN", department,
+      location: user.department + " Office", projectName: "General",
+      ticketType: "SERVICE_REQUEST", attachments: [],
+      creatorId: user.id, creatorName: user.name, assigneeId: null, assigneeName: null,
     })
-
-    addAuditLog({
-      userId: user.id,
-      userName: user.name,
-      userRole: user.role,
-      actionType: "TICKET_CREATED",
-      ticketId: ticket.id,
-      ticketTitle: ticket.title,
-      oldValue: null,
-      newValue: "OPEN",
-      timestamp: new Date().toISOString(),
-      ipAddress: "192.168.1.100",
-    })
-
+    addAuditLog({ userId: user.id, userName: user.name, userRole: user.role, actionType: "TICKET_CREATED", ticketId: ticket.id, ticketTitle: ticket.title, oldValue: null, newValue: "OPEN", timestamp: new Date().toISOString(), ipAddress: "192.168.1.100" })
+    toast.success("Ticket created!", { description: ticket.title })
     onCreated(ticket)
     onClose()
-    toast.success("Ticket created successfully!", { description: ticket.title })
   }
 
   const isSensitive = SENSITIVE_CATEGORIES.includes(category)
+  const sel = "w-full rounded-xl bg-white border border-gray-200 text-gray-800 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 appearance-none cursor-pointer"
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl">
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <h2 className="text-lg font-semibold text-white">New Support Ticket</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col border border-gray-100">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-t-2xl">
+          <h2 className="text-base font-bold text-white">New Support Ticket</h2>
+          <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
+
+          {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Title</label>
-            <Input
+            <label className="flex items-center gap-1.5 text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">
+              <AlignLeft className="h-3.5 w-3.5 text-yellow-500" /> Title <span className="text-red-400">*</span>
+            </label>
+            <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Brief description of your issue"
-              className="bg-gray-800 border-gray-600 text-white placeholder:text-gray-500 rounded-xl"
+              placeholder="Brief description of the issue"
               required
+              className="w-full rounded-xl bg-gray-50 border border-gray-200 text-gray-800 placeholder:text-gray-400 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:bg-white transition-colors"
             />
           </div>
 
+          {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
+            <label className="flex items-center gap-1.5 text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">
+              <AlignLeft className="h-3.5 w-3.5 text-yellow-500" /> Description <span className="text-red-400">*</span>
+            </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Provide detailed information about your issue..."
-              rows={4}
-              className="w-full rounded-xl bg-gray-800 border border-gray-600 text-white placeholder:text-gray-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              placeholder="Provide detailed information..."
+              rows={3}
               required
+              className="w-full rounded-xl bg-gray-50 border border-gray-200 text-gray-800 placeholder:text-gray-400 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:bg-white transition-colors resize-none"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Category + Department */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as TicketCategory)}
-                className="w-full rounded-xl bg-gray-800 border border-gray-600 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c.replace("_", " ")}</option>
-                ))}
-              </select>
+              <label className="flex items-center gap-1.5 text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">
+                <Tag className="h-3.5 w-3.5 text-yellow-500" /> Category
+              </label>
+              <div className="relative">
+                <select value={category} onChange={(e) => setCategory(e.target.value as TicketCategory)} className={sel}>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
+                </select>
+                <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Priority</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as TicketPriority)}
-                className="w-full rounded-xl bg-gray-800 border border-gray-600 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {PRIORITIES.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
+              <label className="flex items-center gap-1.5 text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">
+                <Building2 className="h-3.5 w-3.5 text-yellow-500" /> Department
+              </label>
+              <div className="relative">
+                <select value={department} onChange={(e) => setDepartment(e.target.value as Department)} className={sel}>
+                  {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+              </div>
             </div>
           </div>
 
+          {/* Priority */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Department</label>
-            <select
-              value={department}
-              onChange={(e) => setDepartment(e.target.value as Department)}
-              className="w-full rounded-xl bg-gray-800 border border-gray-600 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {DEPARTMENTS.map((d) => (
-                <option key={d} value={d}>{d}</option>
+            <label className="flex items-center gap-1.5 text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">
+              Priority
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {PRIORITY_CONFIG.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => setPriority(p.value)}
+                  className={cn(
+                    "py-2 rounded-xl border-2 text-xs transition-all",
+                    priority === p.value ? p.active : p.color
+                  )}
+                >
+                  {p.label}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
+          {/* Attachments */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">
+              <Paperclip className="h-3.5 w-3.5 text-yellow-500" /> Attachments
+            </label>
+            <input ref={fileRef} type="file" multiple accept="image/*,.pdf,.doc,.docx" onChange={handleFiles} className="hidden" />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 border-dashed border-yellow-300 text-yellow-600 hover:bg-yellow-50 hover:border-yellow-400 text-sm font-medium transition-colors"
+            >
+              <Paperclip className="h-4 w-4" /> Click to attach images or PDFs
+            </button>
+            {attachments.length > 0 && (
+              <div className="mt-2 space-y-1.5">
+                {attachments.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-xl">
+                    {f.type.startsWith("image/") ? <ImageIcon className="h-4 w-4 text-yellow-500 shrink-0" /> : <FileText className="h-4 w-4 text-yellow-500 shrink-0" />}
+                    <span className="text-xs text-gray-700 flex-1 truncate">{f.name}</span>
+                    <span className="text-xs text-gray-400">{formatSize(f.size)}</span>
+                    <button type="button" onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Sensitive warning */}
           {isSensitive && (
-            <div className="flex items-start gap-2 rounded-xl bg-amber-500/10 border border-amber-500/30 p-3">
-              <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
-              <p className="text-xs text-amber-300">
-                <strong>Sensitive Category:</strong> This ticket will be restricted to HR Managers only and will be audit-logged on every view.
-              </p>
+            <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3">
+              <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-amber-700"><strong>Sensitive Category:</strong> Restricted to HR Managers only.</p>
             </div>
           )}
 
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-xl border-gray-600 text-gray-300 hover:bg-gray-800">
+          {/* Actions */}
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold transition-colors"
+            >
               Cancel
-            </Button>
-            <Button type="submit" className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white">
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-white text-sm font-bold transition-colors shadow-sm"
+            >
               Submit Ticket
-            </Button>
+            </button>
           </div>
         </form>
       </div>

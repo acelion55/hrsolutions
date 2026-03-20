@@ -38,6 +38,13 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "MANAGE_ROLES",
     "VIEW_AUDIT_LOGS",
     "VIEW_ANALYTICS",
+    "READ_ALL_TICKETS",
+    "UPDATE_STATUS",
+    "ASSIGN_TICKET",
+    "DELETE_TICKET",
+    "POST_INTERNAL_NOTE",
+    "POST_PUBLIC_COMMENT",
+    "CREATE_TICKET",
   ],
 }
 
@@ -70,24 +77,22 @@ export function canAccessSensitiveCategory(role: Role, category: TicketCategory)
 // Mirrors: GET /api/tickets/:id — Owner | Assignee | VIEW_ALL
 export function canViewTicket(user: User, ticket: Ticket): boolean {
   if (ticket.deletedAt) {
-    // Soft-deleted tickets only visible to HR_MANAGER+
     return user.role === "HR_MANAGER" || user.role === "SYSTEM_ADMIN"
   }
 
-  // Privacy wall for sensitive categories
   if (!canAccessSensitiveCategory(user.role, ticket.category)) return false
 
   // Owner
   if (ticket.creatorId === user.id) return true
 
-  // Assignee
+  // Assignee — always can see their assigned ticket
   if (ticket.assigneeId === user.id) return true
 
   // VIEW_ALL permission
   if (hasPermission(user.role, "READ_ALL_TICKETS")) return true
 
-  // HR Coordinator can see non-sensitive tickets in their scope
-  if (user.role === "HR_COORDINATOR") return true
+  // HR Coordinator/Specialist can see non-sensitive tickets
+  if (user.role === "HR_COORDINATOR" || user.role === "HR_SPECIALIST") return true
 
   return false
 }

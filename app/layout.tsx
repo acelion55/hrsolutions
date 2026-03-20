@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <body className={`${geist.className} antialiased bg-gray-950 overflow-hidden`}>
+      <body className={`${geist.className} antialiased bg-gray-950`}>
         {children}
         <Toaster position="top-right" richColors />
       </body>

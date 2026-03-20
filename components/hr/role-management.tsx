@@ -9,11 +9,11 @@ import { useAuth } from "./auth-context"
 import { cn } from "@/lib/utils"
 
 const ROLE_COLORS: Record<Role, string> = {
-  EMPLOYEE:       "bg-gray-500/20 text-gray-300 border-gray-500/30",
-  HR_COORDINATOR: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-  HR_SPECIALIST:  "bg-purple-500/20 text-purple-300 border-purple-500/30",
-  HR_MANAGER:     "bg-green-500/20 text-green-300 border-green-500/30",
-  SYSTEM_ADMIN:   "bg-orange-500/20 text-orange-300 border-orange-500/30",
+  EMPLOYEE:       "bg-yellow-50 text-yellow-800 border-yellow-300",
+  HR_COORDINATOR: "bg-blue-50 text-blue-700 border-blue-200",
+  HR_SPECIALIST:  "bg-purple-50 text-purple-700 border-purple-200",
+  HR_MANAGER:     "bg-green-50 text-green-700 border-green-200",
+  SYSTEM_ADMIN:   "bg-orange-50 text-orange-700 border-orange-200",
 }
 
 const ROLE_DESCRIPTIONS: Record<Role, string> = {
@@ -54,13 +54,13 @@ export function RoleManagement() {
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center gap-2 mb-2">
-        <Shield className="h-5 w-5 text-orange-400" />
-        <h2 className="text-lg font-semibold text-white">Role Management</h2>
+        <Shield className="h-5 w-5 text-orange-500" />
+        <h2 className="text-lg font-semibold text-gray-900">Role Management</h2>
       </div>
 
       {/* Role hierarchy legend */}
-      <div className="bg-gray-800/40 rounded-2xl border border-gray-700/50 p-4 space-y-2">
-        <p className="text-xs font-medium text-gray-400 mb-3">Role Hierarchy (lowest → highest)</p>
+      <div className="bg-white rounded-2xl border border-yellow-200 shadow-sm p-4 space-y-2">
+        <p className="text-xs font-medium text-gray-500 mb-3">Role Hierarchy (lowest → highest)</p>
         <div className="flex flex-wrap gap-2">
           {ROLE_HIERARCHY.map((role, i) => (
             <div key={role} className="flex items-center gap-1.5">
@@ -68,7 +68,7 @@ export function RoleManagement() {
                 {role.replace("_", " ")}
               </span>
               {i < ROLE_HIERARCHY.length - 1 && (
-                <span className="text-gray-600 text-xs">→</span>
+                <span className="text-gray-400 text-xs">→</span>
               )}
             </div>
           ))}
@@ -80,17 +80,17 @@ export function RoleManagement() {
         {users.map((user) => (
           <div
             key={user.id}
-            className="flex items-center gap-3 p-3 rounded-xl bg-gray-800/40 border border-gray-700/50 hover:border-gray-600 transition-colors"
+            className="flex items-center gap-3 p-3 rounded-xl bg-white border border-yellow-200 hover:border-yellow-300 hover:shadow-sm transition-all"
           >
-            <div className="h-9 w-9 rounded-full bg-gray-600 flex items-center justify-center text-sm font-bold text-white shrink-0">
+            <div className="h-9 w-9 rounded-full bg-yellow-400 flex items-center justify-center text-sm font-bold text-white shrink-0">
               {user.avatar}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-200">{user.name}</p>
-              <p className="text-xs text-gray-500">{user.email} · {user.department}</p>
+              <p className="text-sm font-medium text-gray-800">{user.name}</p>
+              <p className="text-xs text-gray-400">{user.email} · {user.department}</p>
             </div>
             <div className="flex items-center gap-2">
-              <p className="text-xs text-gray-500 hidden sm:block max-w-[160px] truncate">
+              <p className="text-xs text-gray-400 hidden sm:block max-w-[160px] truncate">
                 {ROLE_DESCRIPTIONS[user.role]}
               </p>
               {editingId === user.id ? (
@@ -99,7 +99,7 @@ export function RoleManagement() {
                   defaultValue={user.role}
                   onChange={(e) => handleRoleChange(user.id, e.target.value as Role)}
                   onBlur={() => setEditingId(null)}
-                  className="rounded-lg bg-gray-700 border border-gray-600 text-white px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                  className="rounded-lg bg-white border border-yellow-300 text-gray-800 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
                 >
                   {ROLE_HIERARCHY.map((r) => (
                     <option key={r} value={r}>{r.replace("_", " ")}</option>

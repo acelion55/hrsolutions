@@ -7,8 +7,9 @@ import { MOCK_USERS } from "@/lib/data"
 interface AuthContextValue {
   currentUser: User | null
   isLoggedIn: boolean
-  login: (email: string, password: string) => boolean
+  login: (userId: string) => void
   logout: () => void
+  setCurrentUser: (user: User) => void
   allUsers: User[]
 }
 
@@ -17,12 +18,9 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
 
-  function login(email: string, password: string): boolean {
-    // Mock: any non-empty password works, match by email
-    const user = MOCK_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase())
-    if (!user || !password.trim()) return false
-    setCurrentUser(user)
-    return true
+  function login(userId: string) {
+    const user = MOCK_USERS.find((u) => u.id === userId)
+    if (user) setCurrentUser(user)
   }
 
   function logout() {
@@ -30,7 +28,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ currentUser, isLoggedIn: !!currentUser, login, logout, allUsers: MOCK_USERS }}>
+    <AuthContext.Provider value={{
+      currentUser,
+      isLoggedIn: !!currentUser,
+      login,
+      logout,
+      setCurrentUser,
+      allUsers: MOCK_USERS,
+    }}>
       {children}
     </AuthContext.Provider>
   )
